@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBER DASH 3D // Realistic Atmosphere Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Three.js + Postprocessing + Howler or WebAudio -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Top HUD Overlay -->
+    <header id="hud" class="hud-layer hidden">
+      <div class="hud-left">
+        <div class="level-badge" id="hud-level-name">LEVEL 1: NEON HORIZON</div>
+        <div class="stats-tag">ATTEMPT <span id="hud-attempt">1</span></div>
+      </div>
+      <div class="hud-center">
+        <!-- Boss Bar (Visible in Boss Mode) -->
+        <div id="boss-hud-bar" class="boss-hud-container hidden">
+          <div class="boss-label">CYBER-LEVIATHAN DISTANCE: <span id="boss-dist-txt">85m</span></div>
+          <div class="boss-progress-bar"><div id="boss-fill" class="boss-fill" style="width: 50%;"></div></div>
+        </div>
+        <!-- Normal Progress Bar -->
+        <div class="progress-container" id="hud-progress-container">
+          <div class="progress-bar-glow"></div>
+          <div class="progress-bar-fill" id="hud-progress-fill"></div>
+          <span class="progress-text" id="hud-progress-text">0%</span>
+        </div>
+      </div>
+      <div class="hud-right">
+        <!-- In-game Shards Chip -->
+        <div class="currency-chip">💎 <span id="hud-shards">0</span></div>
+        <!-- Active Shield Indicator -->
+        <div id="hud-shield-indicator" class="shield-chip hidden">🛡️ SHIELD: <span id="hud-shield-count">1</span></div>
+        <div class="score-chip" id="hud-speed-chip">SPEED <span id="hud-speed">1.0x</span></div>
+        <button id="btn-pause" class="btn-icon" title="Pause Game">⏸</button>
+      </div>
+    </header>
+
+    <!-- Interactive Hint / Jump Pad Pulse Indicator in Game -->
+    <div id="action-hint" class="action-hint hidden">CLICK / SPACE / TAP TO JUMP</div>
+
+    <!-- Achievement Toast Notification -->
+    <div id="achievement-toast" class="achievement-toast hidden">
+      <div class="toast-icon">🏆</div>
+      <div class="toast-body">
+        <div class="toast-title" id="toast-title">ACHIEVEMENT UNLOCKED!</div>
+        <div class="toast-desc" id="toast-desc">First Flight: Survived initial obstacles</div>
+      </div>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <section id="menu-screen" class="screen-overlay active">
+      <div class="stars-backdrop"></div>
+      <div class="menu-content glass-card">
+        <div class="logo-wrapper">
+          <div class="logo-subtitle">HYPER-DIMENSIONAL RHYTHM OVERDRIVE</div>
+          <h1 class="glow-title">CYBER<span class="accent-text">DASH</span> 3D</h1>
+          <div class="wallet-badge">
+            <span class="wallet-label">CYBER-SHARDS:</span>
+            <span class="wallet-val" id="menu-wallet-shards">💎 0</span>
+          </div>
+        </div>
+
+        <!-- Game Mode Selection Navigation -->
+        <div class="mode-select-nav">
+          <button class="mode-tab active" data-mode="classic">CLASSIC RUNS</button>
+          <button class="mode-tab" data-mode="survival">SURVIVAL (AI)</button>
+          <button class="mode-tab" data-mode="boss">BOSS CHASE</button>
+          <button class="mode-tab" data-mode="timeattack">TIME ATTACK</button>
+        </div>
+
+        <!-- Difficulty Selection Bar -->
+        <div class="diff-select-bar" id="diff-bar">
+          <span class="diff-label">AI DIFFICULTY:</span>
+          <div class="diff-options">
+            <button class="diff-btn" data-diff="EASY">EASY</button>
+            <button class="diff-btn active" data-diff="NORMAL">NORMAL</button>
+            <button class="diff-btn" data-diff="HARD">HARD</button>
+            <button class="diff-btn" data-diff="INSANE">INSANE</button>
+          </div>
+        </div>
+
+        <!-- Level Selector Carousel (for Classic mode) -->
+        <div class="level-selector-box" id="classic-carousel">
+          <button id="lvl-prev" class="carousel-arrow" aria-label="Previous Level">&lang;</button>
+          
+          <div class="level-card-display" id="level-card">
+            <div class="level-tag" id="level-difficulty-tag">EASY • 1★</div>
+            <h2 class="level-title" id="level-title">NEON HORIZON</h2>
+            <p class="level-desc" id="level-desc">A synthwave cyberpunk metropolis bathed in holographic gridlights. Master basic jumps & launch pads.</p>
+            <div class="atmosphere-badge" id="level-atmo">ATMOSPHERE: SYNTH CITY</div>
+            <div class="level-stats-row">
+              <span id="level-best-pct">BEST: 0%</span>
+              <span class="divider">•</span>
+              <span id="level-length">LENGTH: 45s</span>
+            </div>
+          </div>
+
+          <button id="lvl-next" class="carousel-arrow" aria-label="Next Level">&rang;</button>
+        </div>
+
+        <!-- Mode Feature Banner (for AI / Boss / Time Attack) -->
+        <div class="mode-feature-box hidden" id="mode-feature-box">
+          <div class="mode-feature-tag" id="mode-feature-tag">BOSS CHASE MODE</div>
+          <h2 class="mode-feature-title" id="mode-feature-title">CYBER-LEVIATHAN HUNT</h2>
+          <p class="mode-feature-desc" id="mode-feature-desc">A gargantuan biomechanical dragon pursues you from behind firing plasma beam barrages! Dodge procedural obstacles and maintain top speed.</p>
+          <div class="mode-bonus-info" id="mode-bonus-info">⚡ AI Procedural obstacle synthesis active for infinite unique runs.</div>
+        </div>
+
+        <div class="menu-action-buttons">
+          <button id="btn-play" class="btn-primary">
+            <span class="btn-shine"></span>
+            <span class="btn-text">LAUNCH RUN [SPACE]</span>
+          </button>
+          
+          <!-- Secondary Utility Buttons -->
+          <div class="secondary-btns">
+            <button id="btn-open-upgrades" class="btn-glass highlight-btn">⚡ UPGRADES</button>
+            <button id="btn-open-leaderboard" class="btn-glass">🏆 LEADERBOARD</button>
+            <button id="btn-open-achievements" class="btn-glass">🎖️ AWARDS</button>
+          </div>
+
+          <div class="tertiary-btns">
+            <button id="btn-audio-toggle" class="btn-glass sm">🔊 SOUND: ON</button>
+            <button id="btn-camera-mode" class="btn-glass sm">📷 CAM: DYNAMIC 3D</button>
+          </div>
+        </div>
+
+        <div class="controls-guide">
+          <div class="control-item"><kbd>SPACE</kbd> / <kbd>CLICK</kbd> / <kbd>W</kbd> / <kbd>TAP</kbd> <span>Jump / Hit Pad / Trigger Orb</span></div>
+          <div class="control-item"><kbd>ESC</kbd> / <kbd>P</kbd> <span>Pause</span></div>
+          <div class="control-item"><kbd>R</kbd> <span>Instant Retry</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upgrades Modal Screen -->
+    <div id="upgrades-modal" class="modal-overlay hidden">
+      <div class="modal-card glass-card">
+        <div class="modal-header">
+          <h2>CYBERNETIC ABILITY WORKSHOP</h2>
+          <div class="modal-wallet">BALANCE: <span id="shop-wallet-shards">💎 0</span></div>
+          <button class="btn-close-modal" id="btn-close-upgrades">&times;</button>
+        </div>
+        <p class="modal-subtitle">Enhance your avatar with high-frequency quantum upgrades using collected Cyber-Shards.</p>
+        
+        <div class="upgrades-grid" id="upgrades-grid">
+          <!-- Upgrade cards injected by JS -->
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-primary" id="btn-done-upgrades">EQUIP & CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaderboard Modal Screen -->
+    <div id="leaderboard-modal" class="modal-overlay hidden">
+      <div class="modal-card glass-card">
+        <div class="modal-header">
+          <h2>NEURAL LEADERBOARD // TOP RUNNERS</h2>
+          <button class="btn-close-modal" id="btn-close-leaderboard">&times;</button>
+        </div>
+        <div class="leaderboard-tabs">
+          <button class="board-tab active" data-board="classic">CLASSIC RUNS</button>
+          <button class="board-tab" data-board="survival">SURVIVAL</button>
+          <button class="board-tab" data-board="boss">BOSS CHASE</button>
+          <button class="board-tab" data-board="timeattack">TIME ATTACK</button>
+        </div>
+        
+        <div class="leaderboard-table-container">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>RANK</th>
+                <th>RUNNER</th>
+                <th>DIFFICULTY</th>
+                <th>SCORE / DIST</th>
+                <th>REWARDS</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-glass" id="btn-close-board">RETURN TO MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Achievements Modal Screen -->
+    <div id="achievements-modal" class="modal-overlay hidden">
+      <div class="modal-card glass-card">
+        <div class="modal-header">
+          <h2>QUANTUM MILESTONES & ACHIEVEMENTS</h2>
+          <button class="btn-close-modal" id="btn-close-achievements">&times;</button>
+        </div>
+        <div class="achievements-progress-banner">
+          <span>PROGRESS: <span id="achieve-count">0/8</span> COMPLETED</span>
+        </div>
+
+        <div class="achievements-list" id="achievements-list">
+          <!-- Injected by JS -->
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-glass" id="btn-close-achieve">BACK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Death / Game Over Screen -->
+    <div id="death-screen" class="screen-overlay hidden">
+      <div class="death-glitch-layer"></div>
+      <div class="game-over-box glass-card danger-border">
+        <div class="death-status" id="death-status-txt">MATRIX COLLISION</div>
+        <h2 class="death-pct"><span id="death-pct-num">42</span>%</h2>
+        <div class="attempt-counter">ATTEMPT #<span id="death-attempt-num">1</span></div>
+        <div class="shards-earned-badge">+<span id="death-shards-earned">0</span> CYBER-SHARDS COLLECTED</div>
+        
+        <div class="death-actions">
+          <button id="btn-retry" class="btn-primary pulse">TRY AGAIN [SPACE / R]</button>
+          <button id="btn-death-upgrades" class="btn-glass highlight-btn">⚡ UPGRADE ABILITIES</button>
+          <button id="btn-quit" class="btn-glass">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victory-screen" class="screen-overlay hidden">
+      <div class="victory-box glass-card gold-border">
+        <div class="victory-badge" id="victory-badge-txt">RUN COMPLETED!</div>
+        <h2 class="victory-title" id="victory-lvl-name">NEON HORIZON</h2>
+        <div class="victory-stars" id="victory-stars-txt">★★★ 100% ★★★</div>
+        <div class="victory-stats-chip">REWARD: +<span id="victory-shards-num">50</span> CYBER-SHARDS</div>
+        <p class="victory-flavor" id="victory-flavor-txt">Atmospheric harmony restored in the continuum.</p>
+        <div class="victory-actions">
+          <button id="btn-next-level" class="btn-primary">NEXT CHALLENGE</button>
+          <button id="btn-victory-upgrades" class="btn-glass highlight-btn">⚡ UPGRADE ABILITIES</button>
+          <button id="btn-victory-menu" class="btn-glass">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pause-screen" class="screen-overlay hidden">
+      <div class="pause-box glass-card">
+        <h2>PAUSED</h2>
+        <div class="pause-actions">
+          <button id="btn-resume" class="btn-primary">RESUME [P]</button>
+          <button id="btn-restart" class="btn-glass">RESTART RUN</button>
+          <button id="btn-pause-quit" class="btn-glass">QUIT TO MENU</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="audio.js"></script>
+  <script src="levels.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
